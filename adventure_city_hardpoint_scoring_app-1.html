@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Adventure City Hardpoint Scoring</title>
+  <style>
+    :root {
+      --bg: #111;
+      --panel: #1c1c1c;
+      --text: #f5f5f5;
+      --muted: #aaa;
+      --blue: #1976ff;
+      --red: #ff3030;
+      --orange: #ff9900;
+      --green: #1db954;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      text-align: center;
+      padding: 16px;
+    }
+    h1 { margin: 8px 0 4px; color: var(--orange); font-size: 28px; }
+    .sub { color: var(--muted); margin-bottom: 16px; }
+    .panel {
+      background: var(--panel);
+      border-radius: 18px;
+      padding: 16px;
+      margin: 12px auto;
+      max-width: 520px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.07);
+    }
+    .timer {
+      font-size: 52px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin: 8px 0;
+    }
+    .hardpoint {
+      font-size: 24px;
+      color: var(--orange);
+      font-weight: 700;
+    }
+    .scores {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .scorebox {
+      border-radius: 16px;
+      padding: 14px;
+      font-weight: 700;
+    }
+    .blue { background: var(--blue); }
+    .red { background: var(--red); }
+    .score {
+      font-size: 58px;
+      line-height: 1;
+      margin-top: 8px;
+    }
+    .control {
+      font-size: 22px;
+      font-weight: 800;
+      margin: 10px 0;
+    }
+    button {
+      border: none;
+      border-radius: 16px;
+      padding: 18px 14px;
+      margin: 6px;
+      font-size: 18px;
+      font-weight: 800;
+      color: white;
+      cursor: pointer;
+      width: calc(50% - 16px);
+      min-height: 62px;
+    }
+    button:active { transform: scale(0.98); }
+    .btn-blue { background: var(--blue); }
+    .btn-red { background: var(--red); }
+    .btn-neutral { background: #666; }
+    .btn-green { background: var(--green); }
+    .btn-orange { background: var(--orange); color: #111; }
+    .btn-dark { background: #333; }
+    .btn-full { width: calc(100% - 16px); }
+    input, select {
+      width: 100%;
+      padding: 14px;
+      margin: 6px 0 12px;
+      border-radius: 12px;
+      border: none;
+      font-size: 18px;
+    }
+    label {
+      display: block;
+      text-align: left;
+      color: var(--muted);
+      font-weight: 700;
+      margin-top: 4px;
+    }
+    .hidden { display: none; }
+    .log {
+      max-height: 180px;
+      overflow-y: auto;
+      text-align: left;
+      font-size: 14px;
+      color: #ddd;
+    }
+    .log div {
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>ADVENTURE CITY</h1>
+  <div class="sub">Hardpoint Scoring App</div>
+
+  <div id="setup" class="panel">
+    <label>Blue Team Name</label>
+    <input id="blueName" value="BLUE TEAM" />
+
+    <label>Red Team Name</label>
+    <input id="redName" value="RED TEAM" />
+
+    <label>Match Duration</label>
+    <select id="matchDuration">
+      <option value="300">5 minutes</option>
+      <option value="420" selected>7 minutes</option>
+      <option value="600">10 minutes</option>
+    </select>
+
+    <label>Hardpoint Rotation</label>
+    <select id="hpDuration">
+      <option value="30">30 seconds</option>
+      <option value="45">45 seconds</option>
+      <option value="60" selected>60 seconds</option>
+      <option value="90">90 seconds</option>
+    </select>
+
+    <button class="btn-green btn-full" onclick="startMatch()">START MATCH</button>
+  </div>
+
+  <div id="game" class="hidden">
+    <div class="panel">
+      <div>MATCH TIME</div>
+      <div id="matchTimer" class="timer">07:00</div>
+
+      <div class="hardpoint">
+        HARDPOINT <span id="hpLetter">A</span> — <span id="hpTimer">60</span>s
+      </div>
+
+      <div class="control">
+        CONTROL: <span id="controlText">NEUTRAL</span>
+      </div>
+
+      <div class="scores">
+        <div class="scorebox blue">
+          <div id="blueLabel">BLUE TEAM</div>
+          <div id="blueScore" class="score">0</div>
+        </div>
+        <div class="scorebox red">
+          <div id="redLabel">RED TEAM</div>
+          <div id="redScore" class="score">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <button class="btn-blue" onclick="capture('blue')">BLUE CAPTURE</button>
+      <button class="btn-red" onclick="capture('red')">RED CAPTURE</button>
+      <button class="btn-neutral" onclick="capture('neutral')">NEUTRAL</button>
+      <button class="btn-orange" onclick="nextHardpoint()">NEXT POINT</button>
+      <button id="pauseBtn" class="btn-dark" onclick="togglePause()">PAUSE</button>
+      <button class="btn-dark" onclick="endMatch()">END MATCH</button>
+      <button class="btn-full btn-dark" onclick="resetAll()">RESET APP</button>
+    </div>
+
+    <div class="panel">
+      <h3>Event Log</h3>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+<script>
+  let blueScore = 0;
+  let redScore = 0;
+  let activeTeam = 'neutral';
+  let matchRemaining = 420;
+  let hpRemaining = 60;
+  let hpDuration = 60;
+  let hpIndex = 0;
+  let running = false;
+  let paused = false;
+  let interval = null;
+  const hpLetters = ['A','B','C','D','E'];
+
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function startMatch() {
+    document.getElementById('setup').classList.add('hidden');
+    document.getElementById('game').classList.remove('hidden');
+
+    document.getElementById('blueLabel').innerText = document.getElementById('blueName').value || 'BLUE TEAM';
+    document.getElementById('redLabel').innerText = document.getElementById('redName').value || 'RED TEAM';
+
+    matchRemaining = parseInt(document.getElementById('matchDuration').value);
+    hpDuration = parseInt(document.getElementById('hpDuration').value);
+    hpRemaining = hpDuration;
+
+    running = true;
+    paused = false;
+    activeTeam = 'neutral';
+    logEvent('Match started');
+
+    updateDisplay();
+
+    interval = setInterval(tick, 1000);
+  }
+
+  function tick() {
+    if (!running || paused) return;
+
+    matchRemaining--;
+    hpRemaining--;
+
+    if (activeTeam === 'blue') blueScore++;
+    if (activeTeam === 'red') redScore++;
+
+    if (hpRemaining <= 0) nextHardpoint(true);
+
+    if (matchRemaining <= 0) {
+      matchRemaining = 0;
+      endMatch();
+    }
+
+    updateDisplay();
+  }
+
+  function capture(team) {
+    activeTeam = team;
+    if (team === 'blue') logEvent('Blue captured Hardpoint ' + hpLetters[hpIndex]);
+    if (team === 'red') logEvent('Red captured Hardpoint ' + hpLetters[hpIndex]);
+    if (team === 'neutral') logEvent('Hardpoint neutral / contested');
+    updateDisplay();
+  }
+
+  function nextHardpoint(auto=false) {
+    hpIndex = (hpIndex + 1) % hpLetters.length;
+    hpRemaining = hpDuration;
+    activeTeam = 'neutral';
+    logEvent((auto ? 'Auto rotation: ' : 'Manual rotation: ') + 'Hardpoint ' + hpLetters[hpIndex]);
+    updateDisplay();
+  }
+
+  function togglePause() {
+    paused = !paused;
+    document.getElementById('pauseBtn').innerText = paused ? 'RESUME' : 'PAUSE';
+    logEvent(paused ? 'Match paused' : 'Match resumed');
+  }
+
+  function endMatch() {
+    running = false;
+    clearInterval(interval);
+    activeTeam = 'neutral';
+    updateDisplay();
+
+    let winner = 'Draw';
+    if (blueScore > redScore) winner = document.getElementById('blueLabel').innerText + ' wins';
+    if (redScore > blueScore) winner = document.getElementById('redLabel').innerText + ' wins';
+
+    logEvent('Match ended — ' + winner);
+    alert('Match ended. ' + winner + '. Score: Blue ' + blueScore + ' - Red ' + redScore);
+  }
+
+  function resetAll() {
+    if (!confirm('Reset the app?')) return;
+    location.reload();
+  }
+
+  function updateDisplay() {
+    document.getElementById('matchTimer').innerText = formatTime(matchRemaining);
+    document.getElementById('hpTimer').innerText = hpRemaining;
+    document.getElementById('hpLetter').innerText = hpLetters[hpIndex];
+    document.getElementById('blueScore').innerText = blueScore;
+    document.getElementById('redScore').innerText = redScore;
+    document.getElementById('controlText').innerText = activeTeam.toUpperCase();
+  }
+
+  function logEvent(text) {
+    const now = new Date().toLocaleTimeString();
+    const div = document.createElement('div');
+    div.innerText = `${now} — ${text}`;
+    document.getElementById('log').prepend(div);
+  }
+</script>
+
+</body>
+</html>
